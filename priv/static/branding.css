@@ -1,0 +1,22 @@
+* {
+  --branding-purple: #80699D;
+  --branding-black: #252525;
+
+  --carousel-height: 500px;  
+  --carousel-border-radius: 0.5em; 
+}
+
+.carousel-inner {
+  position: relative;
+  overflow: hidden;
+  min-height: var(--carousel-height);
+  border-radius: var(--carousel-border-radius);
+}
+
+.text-shadow {
+  text-shadow: rgba(0, 0, 0, 0.6) 0px 1px 2px;
+}
+
+.svg-shadow {
+  filter: drop-shadow(1px 1px 2px rgb(0 0 0 / 0.6));
+}
