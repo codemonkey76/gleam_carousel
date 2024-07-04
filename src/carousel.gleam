@@ -1,7 +1,7 @@
 import carousel/slides
 import gleam/int
 import lustre
-import lustre/attribute.{attribute, class, role, style}
+import lustre/attribute.{attribute, class, role}
 import lustre/effect.{type Effect}
 import lustre/element.{text}
 import lustre/element/html.{button, div, h1, h4, nav, span}
@@ -50,12 +50,10 @@ fn set_page_number(model: Model, page: Int) -> Model {
 }
 
 pub fn view(model: Model) {
-  div([class("w-full bg-white")], [
-    carousel(model.current_slide_index, model.current_slide_index),
-  ])
+  div([class("w-full bg-white")], [carousel(model.current_slide_index)])
 }
 
-pub fn carousel(slide_index: Int, total_slides: Int) {
+pub fn carousel(slide_index: Int) {
   div(
     [class("relative overflow-hidden min-h-[500px] font-display text-white")],
     [
@@ -119,7 +117,7 @@ fn pagination_button(number: Int, active: Bool) {
       role("tab"),
       attribute.attribute("aria-selected", "true"),
     ],
-    [text("1")],
+    [text(int.to_string(number))],
   )
 }
 
