@@ -237,6 +237,9 @@ function style(properties) {
 function class$(name) {
   return attribute("class", name);
 }
+function role(name) {
+  return attribute("role", name);
+}
 
 // build/dev/javascript/lustre/lustre/element.mjs
 function element(tag, attrs, children) {
@@ -775,6 +778,29 @@ function on_click(msg) {
   });
 }
 
+// build/dev/javascript/carousel/carousel/slides.mjs
+function get_transform(slide_number, current_slide) {
+  return [
+    "transform",
+    "translateX(" + to_string(100 * (slide_number - current_slide)) + "%)"
+  ];
+}
+function slide(image_url, slide_index, current_index, content) {
+  return div(
+    toList([
+      class$("w-full h-full absolute bg-cover py-12"),
+      style(
+        toList([
+          ["background-image", "url('" + image_url + "')"],
+          ["transition", "transform 0.5s cubic-bezier(0.42, 0, 0.58, 1);"],
+          get_transform(slide_index, current_index)
+        ])
+      )
+    ]),
+    toList([content()])
+  );
+}
+
 // build/dev/javascript/carousel/carousel.mjs
 var Model = class extends CustomType {
   constructor(current_slide_index, total_slides) {
@@ -790,8 +816,6 @@ var UserClickedSlidePage = class extends CustomType {
   }
 };
 var UserClickedSlideNext = class extends CustomType {
-};
-var UserClickedSlidePrev = class extends CustomType {
 };
 function init2(_) {
   return [new Model(0, 4), none()];
@@ -832,18 +856,39 @@ function update2(model, msg) {
     ];
   }
 }
-function get_transform(slide_number, current_slide) {
-  return [
-    "transform",
-    "translateX(" + to_string(100 * (slide_number - current_slide)) + "%)"
-  ];
-}
-function pagination(slide_index, total_slides) {
-  return nav(
-    toList([class$("absolute mx-auto bottom-0 ")]),
+function pagination_button(number, active) {
+  let classes = (() => {
+    if (!active) {
+      return "bg-[#aaa]";
+    } else {
+      return "bg-[#333] scale-150";
+    }
+  })();
+  return button(
     toList([
-      button(toList([]), toList([text("foo")])),
-      button(toList([]), toList([text("bar")]))
+      on_click(new UserClickedSlidePage(number)),
+      class$(classes),
+      class$(
+        "text-transparent rounded-full w-[.5em] h-[.5em] ease-in-out duration-250 transition-all"
+      ),
+      role("tab"),
+      attribute("aria-selected", "true")
+    ]),
+    toList([text("1")])
+  );
+}
+function pagination(slide_index) {
+  return nav(
+    toList([
+      class$(
+        "absolute flex mx-auto pb-2 bottom-0 left-0 right-0 justify-center space-x-2"
+      )
+    ]),
+    toList([
+      pagination_button(0, slide_index === 0),
+      pagination_button(1, slide_index === 1),
+      pagination_button(2, slide_index === 2),
+      pagination_button(3, slide_index === 3)
     ])
   );
 }
@@ -955,98 +1000,271 @@ function slide1_content() {
     ])
   );
 }
-function slide1(num, current) {
+function slide2_content() {
   return div(
+    toList([class$("font-display py-12 space-y-4 p-8 relative h-100")]),
     toList([
-      class$("w-full h-full absolute bg-cover py-12"),
-      style(
+      h1(
         toList([
-          ["background-image", "url('./priv/static/images/pbx.jpg')"],
-          ["transition", "transform 0.5s cubic-bezier(0.42, 0, 0.58, 1);"],
-          get_transform(num, current)
+          class$(
+            "font-bold text-brand-purple text-5xl uppercase tracking-tight text-shadow animation-bounce-in-left animation-duration-1s animation-delay-1s opacity-0"
+          )
+        ]),
+        toList([text("Virtual Servers")])
+      ),
+      h4(
+        toList([
+          class$(
+            "font-medium text-lg trackin-tight text-shadow animation-bounce-in-left animation-duration-1s animation-delay-2s opacity-0"
+          )
+        ]),
+        toList([
+          text("Enterprise Windows or Linux virtual servers on reliable nodes.")
+        ])
+      ),
+      div(
+        toList([class$("flex space-x-2")]),
+        toList([
+          div(
+            toList([class$("flex flex-col space-y-2")]),
+            toList([
+              check_item(
+                "animation-fade-in animation-duration-1s animation-delay-3s opacity-0",
+                "1x Virtual 1.00Ghz"
+              ),
+              check_item(
+                "animation-fade-in animation-duration-1s animation-delay-4s opacity-0",
+                "50GB Disk space"
+              )
+            ])
+          ),
+          div(
+            toList([class$("flex flex-col space-y-2")]),
+            toList([
+              check_item(
+                "animation-fade-in animation-duration-1s animation-delay-5s opacity-0",
+                "2GB RAM"
+              ),
+              check_item(
+                "animation-fade-in animation-duration-1s animation-delay-6s opacity-0",
+                "50GB Bandwidth out"
+              )
+            ])
+          )
+        ])
+      ),
+      div(
+        toList([class$("py-4 space-x-2")]),
+        toList([
+          button(
+            toList([
+              class$(
+                "bg-brand-black border-brand-black py-2 px-4 animation-zoom-in animation-duration-1s animation-delay-7s opacity-0"
+              )
+            ]),
+            toList([text("View All Plans")])
+          ),
+          button(
+            toList([
+              class$(
+                "bg-brand-purple border-brand-purple py-2 px-4 animation-zoom-in animation-duration-1s animation-delay-7s opacity-0"
+              )
+            ]),
+            toList([text("Try It Free")])
+          )
         ])
       )
-    ]),
-    toList([slide1_content()])
+    ])
   );
 }
-function slide2(num, current) {
+function slide3_content() {
   return div(
+    toList([class$("font-display py-12 space-y-4 p-8 relative h-100")]),
     toList([
-      class$("w-full h-full absolute bg-cover"),
-      style(
+      h1(
         toList([
-          ["background-image", "url('./priv/static/images/pbx.jpg')"],
-          ["transition", "transform 0.5s cubic-bezier(0.42, 0, 0.58, 1);"],
-          get_transform(num, current)
+          class$(
+            "font-bold text-brand-purple text-5xl uppercase tracking-tight text-shadow animation-bounce-in-left animation-duration-1s animation-delay-1s opacity-0"
+          )
+        ]),
+        toList([text("Website Hosting")])
+      ),
+      h4(
+        toList([
+          class$(
+            "font-medium text-lg trackin-tight text-shadow animation-bounce-in-left animation-duration-1s animation-delay-2s opacity-0"
+          )
+        ]),
+        toList([text("Powerful shared hosting on enterprise hardware.")])
+      ),
+      div(
+        toList([class$("flex space-x-2")]),
+        toList([
+          div(
+            toList([class$("flex flex-col space-y-2")]),
+            toList([
+              check_item(
+                "animation-fade-in animation-duration-1s animation-delay-3s opacity-0",
+                "Windows or Linux"
+              ),
+              check_item(
+                "animation-fade-in animation-duration-1s animation-delay-4s opacity-0",
+                "10GB Storage"
+              )
+            ])
+          ),
+          div(
+            toList([class$("flex flex-col space-y-2")]),
+            toList([
+              check_item(
+                "animation-fade-in animation-duration-1s animation-delay-5s opacity-0",
+                "DNS Hosting"
+              ),
+              check_item(
+                "animation-fade-in animation-duration-1s animation-delay-6s opacity-0",
+                "10GB Monthly traffic"
+              )
+            ])
+          )
+        ])
+      ),
+      div(
+        toList([class$("py-4 space-x-2")]),
+        toList([
+          button(
+            toList([
+              class$(
+                "bg-brand-black border-brand-black py-2 px-4 animation-zoom-in animation-duration-1s animation-delay-7s opacity-0"
+              )
+            ]),
+            toList([text("View All Plans")])
+          ),
+          button(
+            toList([
+              class$(
+                "bg-brand-purple border-brand-purple py-2 px-4 animation-zoom-in animation-duration-1s animation-delay-7s opacity-0"
+              )
+            ]),
+            toList([text("Try It Free")])
+          )
         ])
       )
-    ]),
-    toList([])
+    ])
   );
 }
-function slide3(num, current) {
+function slide4_content() {
   return div(
+    toList([class$("font-display py-12 space-y-4 p-8 relative h-100")]),
     toList([
-      class$("w-full h-full absolute bg-cover"),
-      style(
+      h1(
         toList([
-          ["background-image", "url('./priv/static/images/pbx.jpg')"],
-          ["transition", "transform 0.5s cubic-bezier(0.42, 0, 0.58, 1);"],
-          get_transform(num, current)
+          class$(
+            "font-bold text-brand-purple text-5xl uppercase tracking-tight text-shadow animation-bounce-in-left animation-duration-1s animation-delay-1s opacity-0"
+          )
+        ]),
+        toList([text("Dedicated Servers")])
+      ),
+      h4(
+        toList([
+          class$(
+            "font-medium text-lg trackin-tight text-shadow animation-bounce-in-left animation-duration-1s animation-delay-2s opacity-0"
+          )
+        ]),
+        toList([text("Experience enterprise class dedicated resources.")])
+      ),
+      div(
+        toList([class$("flex space-x-2")]),
+        toList([
+          div(
+            toList([class$("flex flex-col space-y-2")]),
+            toList([
+              check_item(
+                "animation-fade-in animation-duration-1s animation-delay-3s opacity-0",
+                "iDRAC6 Express"
+              ),
+              check_item(
+                "animation-fade-in animation-duration-1s animation-delay-4s opacity-0",
+                "2 x 500GB SATAIII HDD"
+              )
+            ])
+          ),
+          div(
+            toList([class$("flex flex-col space-y-2")]),
+            toList([
+              check_item(
+                "animation-fade-in animation-duration-1s animation-delay-5s opacity-0",
+                "32GB DDR3 ECC RAM"
+              ),
+              check_item(
+                "animation-fade-in animation-duration-1s animation-delay-6s opacity-0",
+                "Intel Xeon Quad Core 3.3Ghz CPU's"
+              )
+            ])
+          )
+        ])
+      ),
+      div(
+        toList([class$("py-4 space-x-2")]),
+        toList([
+          button(
+            toList([
+              class$(
+                "bg-brand-black border-brand-black py-2 px-4 animation-zoom-in animation-duration-1s animation-delay-7s opacity-0"
+              )
+            ]),
+            toList([text("View All Plans")])
+          ),
+          button(
+            toList([
+              class$(
+                "bg-brand-purple border-brand-purple py-2 px-4 animation-zoom-in animation-duration-1s animation-delay-7s opacity-0"
+              )
+            ]),
+            toList([text("Try It Free")])
+          )
         ])
       )
-    ]),
-    toList([])
-  );
-}
-function slide4(num, current) {
-  return div(
-    toList([
-      class$("w-full h-full absolute bg-cover"),
-      style(
-        toList([
-          ["background-image", "url('./priv/static/images/pbx.jpg')"],
-          ["transition", "transform 0.5s cubic-bezier(0.42, 0, 0.58, 1);"],
-          get_transform(num, current)
-        ])
-      )
-    ]),
-    toList([])
+    ])
   );
 }
 function carousel(slide_index, total_slides) {
   return div(
-    toList([class$("carousel-inner font-display text-white")]),
     toList([
-      slide1(0, slide_index),
-      slide2(1, slide_index),
-      slide3(2, slide_index),
-      slide4(3, slide_index),
-      pagination(slide_index, total_slides)
+      class$("relative overflow-hidden min-h-[500px] font-display text-white")
+    ]),
+    toList([
+      slide(
+        "./priv/static/images/pbx.jpg",
+        0,
+        slide_index,
+        slide1_content
+      ),
+      slide(
+        "./priv/static/images/virtual-server.jpg",
+        1,
+        slide_index,
+        slide2_content
+      ),
+      slide(
+        "./priv/static/images/website-hosting.jpg",
+        2,
+        slide_index,
+        slide3_content
+      ),
+      slide(
+        "./priv/static/images/dedicated-server.jpg",
+        3,
+        slide_index,
+        slide4_content
+      ),
+      pagination(slide_index)
     ])
   );
 }
 function view(model) {
   return div(
     toList([class$("w-full bg-white")]),
-    toList([
-      carousel(model.current_slide_index, model.current_slide_index),
-      button(
-        toList([
-          on_click(new UserClickedSlideNext()),
-          class$("font-display")
-        ]),
-        toList([text("Next")])
-      ),
-      button(
-        toList([
-          on_click(new UserClickedSlidePrev()),
-          class$("font-display")
-        ]),
-        toList([text("Prev")])
-      )
-    ])
+    toList([carousel(model.current_slide_index, model.current_slide_index)])
   );
 }
 function main() {
@@ -1056,7 +1274,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "carousel",
-      12,
+      13,
       "main",
       "Assignment pattern did not match",
       { value: $ }

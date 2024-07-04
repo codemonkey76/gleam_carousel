@@ -1,6 +1,7 @@
+import carousel/slides
 import gleam/int
 import lustre
-import lustre/attribute.{attribute, class, style}
+import lustre/attribute.{attribute, class, role, style}
 import lustre/effect.{type Effect}
 import lustre/element.{text}
 import lustre/element/html.{button, div, h1, h4, nav, span}
@@ -51,53 +52,74 @@ fn set_page_number(model: Model, page: Int) -> Model {
 pub fn view(model: Model) {
   div([class("w-full bg-white")], [
     carousel(model.current_slide_index, model.current_slide_index),
-    button([event.on_click(UserClickedSlideNext), class("font-display")], [
-      text("Next"),
-    ]),
-    button([event.on_click(UserClickedSlidePrev), class("font-display")], [
-      text("Prev"),
-    ]),
-    // carousel-inner
   ])
 }
 
 pub fn carousel(slide_index: Int, total_slides: Int) {
-  div([class("carousel-inner font-display text-white")], [
-    slide1(0, slide_index),
-    slide2(1, slide_index),
-    slide3(2, slide_index),
-    slide4(3, slide_index),
-    pagination(slide_index, total_slides),
-  ])
-}
-
-fn get_transform(slide_number, current_slide) {
-  #(
-    "transform",
-    "translateX("
-      <> int.to_string({ 100 * { slide_number - current_slide } })
-      <> "%)",
+  div(
+    [class("relative overflow-hidden min-h-[500px] font-display text-white")],
+    [
+      slides.slide(
+        "./priv/static/images/pbx.jpg",
+        0,
+        slide_index,
+        slide1_content,
+      ),
+      slides.slide(
+        "./priv/static/images/virtual-server.jpg",
+        1,
+        slide_index,
+        slide2_content,
+      ),
+      slides.slide(
+        "./priv/static/images/website-hosting.jpg",
+        2,
+        slide_index,
+        slide3_content,
+      ),
+      slides.slide(
+        "./priv/static/images/dedicated-server.jpg",
+        3,
+        slide_index,
+        slide4_content,
+      ),
+      pagination(slide_index),
+    ],
   )
 }
 
-fn pagination(slide_index, total_slides) {
-  nav([class("absolute mx-auto bottom-0 ")], [
-    button([], [text("foo")]),
-    button([], [text("bar")]),
-  ])
+fn pagination(slide_index) {
+  nav(
+    [
+      class(
+        "absolute flex mx-auto pb-2 bottom-0 left-0 right-0 justify-center space-x-2",
+      ),
+    ],
+    [
+      pagination_button(0, slide_index == 0),
+      pagination_button(1, slide_index == 1),
+      pagination_button(2, slide_index == 2),
+      pagination_button(3, slide_index == 3),
+    ],
+  )
 }
 
-fn slide1(num, current) {
-  div(
+fn pagination_button(number: Int, active: Bool) {
+  let classes = case active {
+    False -> "bg-[#aaa]"
+    True -> "bg-[#333] scale-150"
+  }
+  button(
     [
-      class("w-full h-full absolute bg-cover py-12"),
-      style([
-        #("background-image", "url('./priv/static/images/pbx.jpg')"),
-        #("transition", "transform 0.5s cubic-bezier(0.42, 0, 0.58, 1);"),
-        get_transform(num, current),
-      ]),
+      event.on_click(UserClickedSlidePage(number)),
+      class(classes),
+      class(
+        "text-transparent rounded-full w-[.5em] h-[.5em] ease-in-out duration-250 transition-all",
+      ),
+      role("tab"),
+      attribute.attribute("aria-selected", "true"),
     ],
-    [slide1_content()],
+    [text("1")],
   )
 }
 
@@ -187,44 +209,185 @@ pub fn slide1_content() {
   ])
 }
 
-pub fn slide2(num, current) {
-  div(
-    [
-      class("w-full h-full absolute bg-cover"),
-      style([
-        #("background-image", "url('./priv/static/images/pbx.jpg')"),
-        #("transition", "transform 0.5s cubic-bezier(0.42, 0, 0.58, 1);"),
-        get_transform(num, current),
+pub fn slide2_content() {
+  div([class("font-display py-12 space-y-4 p-8 relative h-100")], [
+    h1(
+      [
+        class(
+          "font-bold text-brand-purple text-5xl uppercase tracking-tight text-shadow animation-bounce-in-left animation-duration-1s animation-delay-1s opacity-0",
+        ),
+      ],
+      [text("Virtual Servers")],
+    ),
+    h4(
+      [
+        class(
+          "font-medium text-lg trackin-tight text-shadow animation-bounce-in-left animation-duration-1s animation-delay-2s opacity-0",
+        ),
+      ],
+      [text("Enterprise Windows or Linux virtual servers on reliable nodes.")],
+    ),
+    div([class("flex space-x-2")], [
+      div([class("flex flex-col space-y-2")], [
+        check_item(
+          "animation-fade-in animation-duration-1s animation-delay-3s opacity-0",
+          "1x Virtual 1.00Ghz",
+        ),
+        check_item(
+          "animation-fade-in animation-duration-1s animation-delay-4s opacity-0",
+          "50GB Disk space",
+        ),
       ]),
-    ],
-    [],
-  )
+      div([class("flex flex-col space-y-2")], [
+        check_item(
+          "animation-fade-in animation-duration-1s animation-delay-5s opacity-0",
+          "2GB RAM",
+        ),
+        check_item(
+          "animation-fade-in animation-duration-1s animation-delay-6s opacity-0",
+          "50GB Bandwidth out",
+        ),
+      ]),
+    ]),
+    div([class("py-4 space-x-2")], [
+      button(
+        [
+          class(
+            "bg-brand-black border-brand-black py-2 px-4 animation-zoom-in animation-duration-1s animation-delay-7s opacity-0",
+          ),
+        ],
+        [text("View All Plans")],
+      ),
+      button(
+        [
+          class(
+            "bg-brand-purple border-brand-purple py-2 px-4 animation-zoom-in animation-duration-1s animation-delay-7s opacity-0",
+          ),
+        ],
+        [text("Try It Free")],
+      ),
+    ]),
+  ])
 }
 
-pub fn slide3(num, current) {
-  div(
-    [
-      class("w-full h-full absolute bg-cover"),
-      style([
-        #("background-image", "url('./priv/static/images/pbx.jpg')"),
-        #("transition", "transform 0.5s cubic-bezier(0.42, 0, 0.58, 1);"),
-        get_transform(num, current),
+pub fn slide3_content() {
+  div([class("font-display py-12 space-y-4 p-8 relative h-100")], [
+    h1(
+      [
+        class(
+          "font-bold text-brand-purple text-5xl uppercase tracking-tight text-shadow animation-bounce-in-left animation-duration-1s animation-delay-1s opacity-0",
+        ),
+      ],
+      [text("Website Hosting")],
+    ),
+    h4(
+      [
+        class(
+          "font-medium text-lg trackin-tight text-shadow animation-bounce-in-left animation-duration-1s animation-delay-2s opacity-0",
+        ),
+      ],
+      [text("Powerful shared hosting on enterprise hardware.")],
+    ),
+    div([class("flex space-x-2")], [
+      div([class("flex flex-col space-y-2")], [
+        check_item(
+          "animation-fade-in animation-duration-1s animation-delay-3s opacity-0",
+          "Windows or Linux",
+        ),
+        check_item(
+          "animation-fade-in animation-duration-1s animation-delay-4s opacity-0",
+          "10GB Storage",
+        ),
       ]),
-    ],
-    [],
-  )
+      div([class("flex flex-col space-y-2")], [
+        check_item(
+          "animation-fade-in animation-duration-1s animation-delay-5s opacity-0",
+          "DNS Hosting",
+        ),
+        check_item(
+          "animation-fade-in animation-duration-1s animation-delay-6s opacity-0",
+          "10GB Monthly traffic",
+        ),
+      ]),
+    ]),
+    div([class("py-4 space-x-2")], [
+      button(
+        [
+          class(
+            "bg-brand-black border-brand-black py-2 px-4 animation-zoom-in animation-duration-1s animation-delay-7s opacity-0",
+          ),
+        ],
+        [text("View All Plans")],
+      ),
+      button(
+        [
+          class(
+            "bg-brand-purple border-brand-purple py-2 px-4 animation-zoom-in animation-duration-1s animation-delay-7s opacity-0",
+          ),
+        ],
+        [text("Try It Free")],
+      ),
+    ]),
+  ])
 }
 
-pub fn slide4(num, current) {
-  div(
-    [
-      class("w-full h-full absolute bg-cover"),
-      style([
-        #("background-image", "url('./priv/static/images/pbx.jpg')"),
-        #("transition", "transform 0.5s cubic-bezier(0.42, 0, 0.58, 1);"),
-        get_transform(num, current),
+pub fn slide4_content() {
+  div([class("font-display py-12 space-y-4 p-8 relative h-100")], [
+    h1(
+      [
+        class(
+          "font-bold text-brand-purple text-5xl uppercase tracking-tight text-shadow animation-bounce-in-left animation-duration-1s animation-delay-1s opacity-0",
+        ),
+      ],
+      [text("Dedicated Servers")],
+    ),
+    h4(
+      [
+        class(
+          "font-medium text-lg trackin-tight text-shadow animation-bounce-in-left animation-duration-1s animation-delay-2s opacity-0",
+        ),
+      ],
+      [text("Experience enterprise class dedicated resources.")],
+    ),
+    div([class("flex space-x-2")], [
+      div([class("flex flex-col space-y-2")], [
+        check_item(
+          "animation-fade-in animation-duration-1s animation-delay-3s opacity-0",
+          "iDRAC6 Express",
+        ),
+        check_item(
+          "animation-fade-in animation-duration-1s animation-delay-4s opacity-0",
+          "2 x 500GB SATAIII HDD",
+        ),
       ]),
-    ],
-    [],
-  )
+      div([class("flex flex-col space-y-2")], [
+        check_item(
+          "animation-fade-in animation-duration-1s animation-delay-5s opacity-0",
+          "32GB DDR3 ECC RAM",
+        ),
+        check_item(
+          "animation-fade-in animation-duration-1s animation-delay-6s opacity-0",
+          "Intel Xeon Quad Core 3.3Ghz CPU's",
+        ),
+      ]),
+    ]),
+    div([class("py-4 space-x-2")], [
+      button(
+        [
+          class(
+            "bg-brand-black border-brand-black py-2 px-4 animation-zoom-in animation-duration-1s animation-delay-7s opacity-0",
+          ),
+        ],
+        [text("View All Plans")],
+      ),
+      button(
+        [
+          class(
+            "bg-brand-purple border-brand-purple py-2 px-4 animation-zoom-in animation-duration-1s animation-delay-7s opacity-0",
+          ),
+        ],
+        [text("Try It Free")],
+      ),
+    ]),
+  ])
 }
