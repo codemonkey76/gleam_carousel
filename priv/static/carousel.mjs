@@ -152,10 +152,18 @@ function identity(x) {
 function to_string3(term) {
   return term.toString();
 }
+function console_log(term) {
+  console.log(term);
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/int.mjs
 function to_string(x) {
   return to_string3(x);
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/io.mjs
+function println(string3) {
+  return console_log(string3);
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/bool.mjs
@@ -174,6 +182,11 @@ var Effect = class extends CustomType {
     this.all = all;
   }
 };
+function from2(effect) {
+  return new Effect(toList([(dispatch, _) => {
+    return effect(dispatch);
+  }]));
+}
 function none() {
   return new Effect(toList([]));
 }
@@ -236,6 +249,9 @@ function style(properties) {
 }
 function class$(name) {
   return attribute("class", name);
+}
+function id(name) {
+  return attribute("id", name);
 }
 function role(name) {
   return attribute("role", name);
@@ -788,7 +804,7 @@ function get_transform(slide_number, current_slide) {
 function slide(image_url, slide_index, current_index, content) {
   return div(
     toList([
-      class$("w-full h-full absolute bg-cover py-12"),
+      class$("w-full h-full absolute bg-cover py-12 slide"),
       style(
         toList([
           ["background-image", "url('" + image_url + "')"],
@@ -801,12 +817,47 @@ function slide(image_url, slide_index, current_index, content) {
   );
 }
 
+// build/dev/javascript/carousel/ffi.mjs
+function requestAnimationFrame(callback) {
+  window.requestAnimationFrame(callback);
+}
+function resetAnimations(selector) {
+  const el2 = document.querySelector(selector);
+  if (el2 === null) {
+    console.log(`Invalid selector: ${selector}`);
+    return;
+  }
+  const animations = el2.getAnimations({ subtree: true });
+  animations.forEach((animation) => {
+    animation.pause();
+    animation.currentTime = 0;
+  });
+}
+function playAnimationsForSlide(selector, index) {
+  const found = document.querySelectorAll(selector);
+  if (!found || index >= found.length) {
+    return;
+  }
+  const animations = found[index].getAnimations({ subtree: true });
+  if (!animations) {
+    return;
+  }
+  animations.forEach((animation) => {
+    animation.currentTime = 0;
+    animation.play();
+  });
+}
+function setTimeout(delay, callback) {
+  return globalThis.setTimeout(callback, delay);
+}
+
 // build/dev/javascript/carousel/carousel.mjs
 var Model = class extends CustomType {
-  constructor(current_slide_index, total_slides) {
+  constructor(current_slide_index, total_slides, timer) {
     super();
     this.current_slide_index = current_slide_index;
     this.total_slides = total_slides;
+    this.timer = timer;
   }
 };
 var UserClickedSlidePage = class extends CustomType {
@@ -817,43 +868,20 @@ var UserClickedSlidePage = class extends CustomType {
 };
 var UserClickedSlideNext = class extends CustomType {
 };
-function init2(_) {
-  return [new Model(0, 4), none()];
-}
+var AutoplayTimeoutTriggered = class extends CustomType {
+};
+var AutoplayTimeoutSet = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
 function set_page_number(model, page) {
   if (page < model.total_slides && page >= 0) {
     let n = page;
     return model.withFields({ current_slide_index: n });
   } else {
     return model;
-  }
-}
-function update2(model, msg) {
-  if (msg instanceof UserClickedSlidePage) {
-    let n = msg.slide_index;
-    return [
-      (() => {
-        let _pipe = model;
-        return set_page_number(_pipe, n);
-      })(),
-      none()
-    ];
-  } else if (msg instanceof UserClickedSlideNext) {
-    return [
-      (() => {
-        let _pipe = model;
-        return set_page_number(_pipe, model.current_slide_index + 1);
-      })(),
-      none()
-    ];
-  } else {
-    return [
-      (() => {
-        let _pipe = model;
-        return set_page_number(_pipe, model.current_slide_index - 1);
-      })(),
-      none()
-    ];
   }
 }
 function pagination_button(number, active) {
@@ -874,7 +902,7 @@ function pagination_button(number, active) {
       role("tab"),
       attribute("aria-selected", "true")
     ]),
-    toList([text("1")])
+    toList([text(to_string(number))])
   );
 }
 function pagination(slide_index) {
@@ -1227,9 +1255,10 @@ function slide4_content() {
     ])
   );
 }
-function carousel(slide_index, total_slides) {
+function carousel(slide_index) {
   return div(
     toList([
+      id("carousel-1"),
       class$("relative overflow-hidden min-h-[500px] font-display text-white")
     ]),
     toList([
@@ -1264,8 +1293,105 @@ function carousel(slide_index, total_slides) {
 function view(model) {
   return div(
     toList([class$("w-full bg-white")]),
-    toList([carousel(model.current_slide_index, model.current_slide_index)])
+    toList([carousel(model.current_slide_index)])
   );
+}
+function autoplay_trigger() {
+  println("Autoplay timeout triggered.");
+  return from2(
+    (dispatch) => {
+      let _pipe = new AutoplayTimeoutTriggered();
+      return dispatch(_pipe);
+    }
+  );
+}
+function start_animations(slide_selector2, slide_index) {
+  return from2(
+    (_) => {
+      return requestAnimationFrame(
+        (_2) => {
+          playAnimationsForSlide(slide_selector2, slide_index);
+          return void 0;
+        }
+      );
+    }
+  );
+}
+function init_animations(carousel_selector2, slide_selector2, slide_index) {
+  return from2(
+    (dispatch) => {
+      return requestAnimationFrame(
+        (_) => {
+          resetAnimations(carousel_selector2);
+          playAnimationsForSlide(slide_selector2, slide_index);
+          println("Setting timeout for 10 seconds");
+          let timer = setTimeout(1e4, autoplay_trigger);
+          let _pipe = new AutoplayTimeoutSet(timer);
+          return dispatch(_pipe);
+        }
+      );
+    }
+  );
+}
+var carousel_selector = "#carousel-1";
+var slide_selector = ".slide";
+function init2(_) {
+  return [
+    new Model(0, 4, 0),
+    init_animations(carousel_selector, slide_selector, 0)
+  ];
+}
+function update2(model, msg) {
+  if (msg instanceof AutoplayTimeoutSet) {
+    let timer = msg[0];
+    return [model.withFields({ timer }), none()];
+  } else if (msg instanceof AutoplayTimeoutTriggered) {
+    println("Current Slide: " + to_string(model.current_slide_index));
+    let new_page = (() => {
+      let $ = model.current_slide_index;
+      if ($ < model.total_slides - 1) {
+        let n = $;
+        return n + 1;
+      } else {
+        return 0;
+      }
+    })();
+    println("Setting new page number: " + to_string(new_page));
+    return [
+      (() => {
+        let _pipe = model;
+        return set_page_number(_pipe, new_page);
+      })(),
+      none()
+    ];
+  } else if (msg instanceof UserClickedSlidePage) {
+    let n = msg.slide_index;
+    return [
+      (() => {
+        let _pipe = model;
+        return set_page_number(_pipe, n);
+      })(),
+      start_animations(slide_selector, n)
+    ];
+  } else if (msg instanceof UserClickedSlideNext) {
+    let model$1 = (() => {
+      let _pipe = model;
+      return set_page_number(_pipe, model.current_slide_index + 1);
+    })();
+    return [
+      model$1,
+      start_animations(slide_selector, model$1.current_slide_index)
+    ];
+  } else {
+    let model$1 = (() => {
+      let _pipe = model;
+      return set_page_number(_pipe, model.current_slide_index - 1);
+    })();
+    return [
+      model$1,
+      start_animations(slide_selector, model$1.current_slide_index)
+    ];
+  }
 }
 function main() {
   let app = application(init2, update2, view);
@@ -1274,7 +1400,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "carousel",
-      13,
+      18,
       "main",
       "Assignment pattern did not match",
       { value: $ }

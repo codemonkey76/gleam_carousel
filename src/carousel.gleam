@@ -1,12 +1,17 @@
 import carousel/slides
 import gleam/int
+import gleam/io
 import lustre
-import lustre/attribute.{attribute, class, role}
+import lustre/attribute.{attribute, class, id, role}
 import lustre/effect.{type Effect}
 import lustre/element.{text}
 import lustre/element/html.{button, div, h1, h4, nav, span}
 import lustre/element/svg.{svg}
 import lustre/event
+
+const carousel_selector = "#carousel-1"
+
+const slide_selector = ".slide"
 
 pub fn main() {
   let app = lustre.application(init, update, view)
@@ -14,30 +19,45 @@ pub fn main() {
 }
 
 pub type Model {
-  Model(current_slide_index: Int, total_slides: Int)
+  Model(current_slide_index: Int, total_slides: Int, timer: Int)
 }
 
 pub type Msg {
   UserClickedSlidePage(slide_index: Int)
   UserClickedSlideNext
   UserClickedSlidePrev
+  AutoplayTimeoutTriggered
+  AutoplayTimeoutSet(Int)
 }
 
 pub fn init(_flags) -> #(Model, Effect(Msg)) {
-  #(Model(0, 4), effect.none())
+  #(Model(0, 4, 0), init_animations(carousel_selector, slide_selector, 0))
 }
 
 pub fn update(model: Model, msg) {
   case msg {
-    UserClickedSlidePage(n) -> #(model |> set_page_number(n), effect.none())
-    UserClickedSlideNext -> #(
-      model |> set_page_number(model.current_slide_index + 1),
-      effect.none(),
+    AutoplayTimeoutSet(timer) -> #(Model(..model, timer: timer), effect.none())
+    AutoplayTimeoutTriggered -> {
+      io.println("Current Slide: " <> int.to_string(model.current_slide_index))
+      let new_page = case model.current_slide_index {
+        n if n < model.total_slides - 1 -> n + 1
+        _ -> 0
+      }
+      io.println("Setting new page number: " <> int.to_string(new_page))
+      #(model |> set_page_number(new_page), effect.none())
+    }
+    UserClickedSlidePage(n) -> #(
+      model |> set_page_number(n),
+      start_animations(slide_selector, n),
     )
-    UserClickedSlidePrev -> #(
-      model |> set_page_number(model.current_slide_index - 1),
-      effect.none(),
-    )
+    UserClickedSlideNext -> {
+      let model = model |> set_page_number(model.current_slide_index + 1)
+      #(model, start_animations(slide_selector, model.current_slide_index))
+    }
+    UserClickedSlidePrev -> {
+      let model = model |> set_page_number(model.current_slide_index - 1)
+      #(model, start_animations(slide_selector, model.current_slide_index))
+    }
   }
 }
 
@@ -50,12 +70,16 @@ fn set_page_number(model: Model, page: Int) -> Model {
 }
 
 pub fn view(model: Model) {
+  // reset_animations(carousel_selector)
   div([class("w-full bg-white")], [carousel(model.current_slide_index)])
 }
 
 pub fn carousel(slide_index: Int) {
   div(
-    [class("relative overflow-hidden min-h-[500px] font-display text-white")],
+    [
+      id("carousel-1"),
+      class("relative overflow-hidden min-h-[500px] font-display text-white"),
+    ],
     [
       slides.slide(
         "./priv/static/images/pbx.jpg",
@@ -389,3 +413,53 @@ pub fn slide4_content() {
     ]),
   ])
 }
+
+fn init_animations(
+  carousel_selector: String,
+  slide_selector: String,
+  slide_index: Int,
+) -> Effect(Msg) {
+  use dispatch <- effect.from
+  use _ <- request_animation_frame
+
+  do_reset_animations(carousel_selector)
+  play_animations_for_slide(slide_selector, slide_index)
+  io.println("Setting timeout for 10 seconds")
+  let timer = set_timeout(10_000, autoplay_trigger)
+  AutoplayTimeoutSet(timer) |> dispatch
+}
+
+fn autoplay_trigger() -> Effect(Msg) {
+  io.println("Autoplay timeout triggered.")
+  use dispatch <- effect.from
+
+  AutoplayTimeoutTriggered |> dispatch
+}
+
+fn start_animations(slide_selector: String, slide_index: Int) -> Effect(msg) {
+  use _ <- effect.from
+  use _ <- request_animation_frame
+
+  play_animations_for_slide(slide_selector, slide_index)
+  Nil
+}
+
+@external(javascript, "./ffi.mjs", "playAnimationsForSlide")
+fn play_animations_for_slide(selector: String, index: Int) -> Nil
+
+@external(javascript, "./ffi.mjs", "resetAnimations")
+fn do_reset_animations(selector: String) -> Nil
+
+pub type RequestID =
+  Nil
+
+@external(javascript, "./ffi.mjs", "requestAnimationFrame")
+fn request_animation_frame(callbacki: fn(Float) -> Nil) -> RequestID
+
+pub type TimerID
+
+@external(javascript, "./ffi.mjs", "setTimeout")
+fn set_timeout(delay: Int, callback: fn() -> a) -> Int
+
+@external(javascript, "./ffi.mjs", "clearTimeout")
+fn clear_timeout(timer: Int) -> Nil

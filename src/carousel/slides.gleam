@@ -11,7 +11,7 @@ pub fn slide(
 ) {
   div(
     [
-      class("w-full h-full absolute bg-cover py-12"),
+      class("w-full h-full absolute bg-cover py-12 slide"),
       style([
         #("background-image", "url('" <> image_url <> "')"),
         #("transition", "transform 0.5s cubic-bezier(0.42, 0, 0.58, 1);"),
