@@ -1,11 +1,19 @@
+import carousel/effects
 import carousel/slides
+import carousel/types.{
+  type Model, type Msg, AutoplayTimeoutSet, AutoplayTimeoutTriggered, Model,
+  UserClickedSlideNext, UserClickedSlidePage, UserClickedSlidePrev,
+  UserMouseLeftCarousel, UserMouseOveredCarousel,
+}
+import carousel/ui
 import gleam/int
 import gleam/io
+import gleam/option.{type Option, None, Some}
 import lustre
 import lustre/attribute.{attribute, class, id, role}
 import lustre/effect.{type Effect}
 import lustre/element.{text}
-import lustre/element/html.{button, div, h1, h4, nav, span}
+import lustre/element/html.{button, div, nav}
 import lustre/element/svg.{svg}
 import lustre/event
 
@@ -18,46 +26,76 @@ pub fn main() {
   let assert Ok(_) = lustre.start(app, "#app", Nil)
 }
 
-pub type Model {
-  Model(current_slide_index: Int, total_slides: Int, timer: Int)
-}
-
-pub type Msg {
-  UserClickedSlidePage(slide_index: Int)
-  UserClickedSlideNext
-  UserClickedSlidePrev
-  AutoplayTimeoutTriggered
-  AutoplayTimeoutSet(Int)
-}
-
 pub fn init(_flags) -> #(Model, Effect(Msg)) {
-  #(Model(0, 4, 0), init_animations(carousel_selector, slide_selector, 0))
+  #(
+    Model(0, 4, None),
+    effects.init_animations(carousel_selector, slide_selector, 0),
+  )
 }
 
 pub fn update(model: Model, msg) {
   case msg {
-    AutoplayTimeoutSet(timer) -> #(Model(..model, timer: timer), effect.none())
+    UserMouseOveredCarousel -> {
+      io.println("Mouse Entered -> Pausing Autoplay")
+      let model = model |> stop_autoplay
+      #(model, effect.none())
+    }
+    UserMouseLeftCarousel -> {
+      io.println("Mouse Left -> Starting Autoplay")
+      #(model, effects.start_autoplay())
+    }
+    AutoplayTimeoutSet(timer) -> {
+      #(Model(..model, timer: Some(timer)), effect.none())
+    }
     AutoplayTimeoutTriggered -> {
-      io.println("Current Slide: " <> int.to_string(model.current_slide_index))
-      let new_page = case model.current_slide_index {
-        n if n < model.total_slides - 1 -> n + 1
-        _ -> 0
-      }
-      io.println("Setting new page number: " <> int.to_string(new_page))
-      #(model |> set_page_number(new_page), effect.none())
+      let model = model |> increment_page
+      #(
+        model,
+        effects.start_animations(slide_selector, model.current_slide_index),
+      )
     }
     UserClickedSlidePage(n) -> #(
       model |> set_page_number(n),
-      start_animations(slide_selector, n),
+      effects.start_animations(slide_selector, n),
     )
     UserClickedSlideNext -> {
-      let model = model |> set_page_number(model.current_slide_index + 1)
-      #(model, start_animations(slide_selector, model.current_slide_index))
+      let model = model |> increment_page
+      #(
+        model,
+        effects.start_animations(slide_selector, model.current_slide_index),
+      )
     }
     UserClickedSlidePrev -> {
-      let model = model |> set_page_number(model.current_slide_index - 1)
-      #(model, start_animations(slide_selector, model.current_slide_index))
+      let model = model |> decrement_page
+      #(
+        model,
+        effects.start_animations(slide_selector, model.current_slide_index),
+      )
     }
+  }
+}
+
+fn stop_autoplay(model: Model) -> Model {
+  case model.timer {
+    Some(timer) -> types.clear_timeout(timer)
+    _ -> Nil
+  }
+
+  Model(..model, timer: None)
+}
+
+fn decrement_page(model: Model) -> Model {
+  case model.current_slide_index {
+    0 -> Model(..model, current_slide_index: model.total_slides - 1)
+    _ -> Model(..model, current_slide_index: model.current_slide_index - 1)
+  }
+}
+
+fn increment_page(model: Model) -> Model {
+  case model.current_slide_index {
+    n if n < model.total_slides - 1 ->
+      Model(..model, current_slide_index: model.current_slide_index + 1)
+    _ -> Model(..model, current_slide_index: 0)
   }
 }
 
@@ -70,7 +108,6 @@ fn set_page_number(model: Model, page: Int) -> Model {
 }
 
 pub fn view(model: Model) {
-  // reset_animations(carousel_selector)
   div([class("w-full bg-white")], [carousel(model.current_slide_index)])
 }
 
@@ -78,6 +115,8 @@ pub fn carousel(slide_index: Int) {
   div(
     [
       id("carousel-1"),
+      event.on_mouse_enter(UserMouseOveredCarousel),
+      event.on_mouse_leave(UserMouseLeftCarousel),
       class("relative overflow-hidden min-h-[500px] font-display text-white"),
     ],
     [
@@ -85,27 +124,29 @@ pub fn carousel(slide_index: Int) {
         "./priv/static/images/pbx.jpg",
         0,
         slide_index,
-        slide1_content,
+        slides.slide1_content,
       ),
       slides.slide(
         "./priv/static/images/virtual-server.jpg",
         1,
         slide_index,
-        slide2_content,
+        slides.slide2_content,
       ),
       slides.slide(
         "./priv/static/images/website-hosting.jpg",
         2,
         slide_index,
-        slide3_content,
+        slides.slide3_content,
       ),
       slides.slide(
         "./priv/static/images/dedicated-server.jpg",
         3,
         slide_index,
-        slide4_content,
+        slides.slide4_content,
       ),
       pagination(slide_index),
+      ui.next_button(),
+      ui.prev_button(),
     ],
   )
 }
@@ -144,322 +185,3 @@ fn pagination_button(number: Int, active: Bool) {
     [text(int.to_string(number))],
   )
 }
-
-fn check_item(classes: String, content: String) {
-  div([class(classes), class("flex items-center space-x-2")], [
-    svg(
-      [
-        class("fill-current text-brand-purple size-6 relative svg-shadow"),
-        attribute("xmlns", "http://www.w3.org/2000/svg"),
-        attribute("viewBox", "0 0 512 512"),
-      ],
-      [
-        svg.path([
-          attribute("d", "M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512z"),
-        ]),
-      ],
-    ),
-    svg(
-      [
-        class("fill-current absolute svg-shadow size-3"),
-        attribute("xmlns", "http://www.w3.org/2000/svg"),
-        attribute("viewBox", "0 0 448 512"),
-      ],
-      [
-        svg.path([
-          attribute(
-            "d",
-            "M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z",
-          ),
-        ]),
-      ],
-    ),
-    span([class("text-lg tracking-tight text-shadow")], [text(content)]),
-  ])
-}
-
-pub fn slide1_content() {
-  div([class("font-display py-12 space-y-4 p-8 relative h-100")], [
-    h1(
-      [
-        class(
-          "font-bold text-brand-purple text-5xl uppercase tracking-tight text-shadow animation-bounce-in-left animation-duration-1s animation-delay-1s opacity-0",
-        ),
-      ],
-      [text("Hosted PBX")],
-    ),
-    h4(
-      [
-        class(
-          "font-medium text-lg trackin-tight text-shadow animation-bounce-in-left animation-duration-1s animation-delay-2s opacity-0",
-        ),
-      ],
-      [text("Cloud-based communication system without the chunky equipment.")],
-    ),
-    div([class("flex flex-col space-y-2")], [
-      check_item(
-        "animation-fade-in animation-duration-1s animation-delay-3s opacity-0",
-        "Can come with transportable handsets.",
-      ),
-      check_item(
-        "animation-fade-in animation-duration-1s animation-delay-4s opacity-0",
-        "Compatible with your personal mobile devices.",
-      ),
-      check_item(
-        "animation-fade-in animation-duration-1s animation-delay-5s opacity-0",
-        "Unlimited extensions.",
-      ),
-    ]),
-    div([class("py-4 space-x-2")], [
-      button(
-        [
-          class(
-            "bg-brand-black border-brand-black py-2 px-4 animation-zoom-in animation-duration-1s animation-delay-6s opacity-0",
-          ),
-        ],
-        [text("View All Plans")],
-      ),
-      button(
-        [
-          class(
-            "bg-brand-purple border-brand-purple py-2 px-4 animation-zoom-in animation-duration-1s animation-delay-6s opacity-0",
-          ),
-        ],
-        [text("Try It Free")],
-      ),
-    ]),
-  ])
-}
-
-pub fn slide2_content() {
-  div([class("font-display py-12 space-y-4 p-8 relative h-100")], [
-    h1(
-      [
-        class(
-          "font-bold text-brand-purple text-5xl uppercase tracking-tight text-shadow animation-bounce-in-left animation-duration-1s animation-delay-1s opacity-0",
-        ),
-      ],
-      [text("Virtual Servers")],
-    ),
-    h4(
-      [
-        class(
-          "font-medium text-lg trackin-tight text-shadow animation-bounce-in-left animation-duration-1s animation-delay-2s opacity-0",
-        ),
-      ],
-      [text("Enterprise Windows or Linux virtual servers on reliable nodes.")],
-    ),
-    div([class("flex space-x-2")], [
-      div([class("flex flex-col space-y-2")], [
-        check_item(
-          "animation-fade-in animation-duration-1s animation-delay-3s opacity-0",
-          "1x Virtual 1.00Ghz",
-        ),
-        check_item(
-          "animation-fade-in animation-duration-1s animation-delay-4s opacity-0",
-          "50GB Disk space",
-        ),
-      ]),
-      div([class("flex flex-col space-y-2")], [
-        check_item(
-          "animation-fade-in animation-duration-1s animation-delay-5s opacity-0",
-          "2GB RAM",
-        ),
-        check_item(
-          "animation-fade-in animation-duration-1s animation-delay-6s opacity-0",
-          "50GB Bandwidth out",
-        ),
-      ]),
-    ]),
-    div([class("py-4 space-x-2")], [
-      button(
-        [
-          class(
-            "bg-brand-black border-brand-black py-2 px-4 animation-zoom-in animation-duration-1s animation-delay-7s opacity-0",
-          ),
-        ],
-        [text("View All Plans")],
-      ),
-      button(
-        [
-          class(
-            "bg-brand-purple border-brand-purple py-2 px-4 animation-zoom-in animation-duration-1s animation-delay-7s opacity-0",
-          ),
-        ],
-        [text("Try It Free")],
-      ),
-    ]),
-  ])
-}
-
-pub fn slide3_content() {
-  div([class("font-display py-12 space-y-4 p-8 relative h-100")], [
-    h1(
-      [
-        class(
-          "font-bold text-brand-purple text-5xl uppercase tracking-tight text-shadow animation-bounce-in-left animation-duration-1s animation-delay-1s opacity-0",
-        ),
-      ],
-      [text("Website Hosting")],
-    ),
-    h4(
-      [
-        class(
-          "font-medium text-lg trackin-tight text-shadow animation-bounce-in-left animation-duration-1s animation-delay-2s opacity-0",
-        ),
-      ],
-      [text("Powerful shared hosting on enterprise hardware.")],
-    ),
-    div([class("flex space-x-2")], [
-      div([class("flex flex-col space-y-2")], [
-        check_item(
-          "animation-fade-in animation-duration-1s animation-delay-3s opacity-0",
-          "Windows or Linux",
-        ),
-        check_item(
-          "animation-fade-in animation-duration-1s animation-delay-4s opacity-0",
-          "10GB Storage",
-        ),
-      ]),
-      div([class("flex flex-col space-y-2")], [
-        check_item(
-          "animation-fade-in animation-duration-1s animation-delay-5s opacity-0",
-          "DNS Hosting",
-        ),
-        check_item(
-          "animation-fade-in animation-duration-1s animation-delay-6s opacity-0",
-          "10GB Monthly traffic",
-        ),
-      ]),
-    ]),
-    div([class("py-4 space-x-2")], [
-      button(
-        [
-          class(
-            "bg-brand-black border-brand-black py-2 px-4 animation-zoom-in animation-duration-1s animation-delay-7s opacity-0",
-          ),
-        ],
-        [text("View All Plans")],
-      ),
-      button(
-        [
-          class(
-            "bg-brand-purple border-brand-purple py-2 px-4 animation-zoom-in animation-duration-1s animation-delay-7s opacity-0",
-          ),
-        ],
-        [text("Try It Free")],
-      ),
-    ]),
-  ])
-}
-
-pub fn slide4_content() {
-  div([class("font-display py-12 space-y-4 p-8 relative h-100")], [
-    h1(
-      [
-        class(
-          "font-bold text-brand-purple text-5xl uppercase tracking-tight text-shadow animation-bounce-in-left animation-duration-1s animation-delay-1s opacity-0",
-        ),
-      ],
-      [text("Dedicated Servers")],
-    ),
-    h4(
-      [
-        class(
-          "font-medium text-lg trackin-tight text-shadow animation-bounce-in-left animation-duration-1s animation-delay-2s opacity-0",
-        ),
-      ],
-      [text("Experience enterprise class dedicated resources.")],
-    ),
-    div([class("flex space-x-2")], [
-      div([class("flex flex-col space-y-2")], [
-        check_item(
-          "animation-fade-in animation-duration-1s animation-delay-3s opacity-0",
-          "iDRAC6 Express",
-        ),
-        check_item(
-          "animation-fade-in animation-duration-1s animation-delay-4s opacity-0",
-          "2 x 500GB SATAIII HDD",
-        ),
-      ]),
-      div([class("flex flex-col space-y-2")], [
-        check_item(
-          "animation-fade-in animation-duration-1s animation-delay-5s opacity-0",
-          "32GB DDR3 ECC RAM",
-        ),
-        check_item(
-          "animation-fade-in animation-duration-1s animation-delay-6s opacity-0",
-          "Intel Xeon Quad Core 3.3Ghz CPU's",
-        ),
-      ]),
-    ]),
-    div([class("py-4 space-x-2")], [
-      button(
-        [
-          class(
-            "bg-brand-black border-brand-black py-2 px-4 animation-zoom-in animation-duration-1s animation-delay-7s opacity-0",
-          ),
-        ],
-        [text("View All Plans")],
-      ),
-      button(
-        [
-          class(
-            "bg-brand-purple border-brand-purple py-2 px-4 animation-zoom-in animation-duration-1s animation-delay-7s opacity-0",
-          ),
-        ],
-        [text("Try It Free")],
-      ),
-    ]),
-  ])
-}
-
-fn init_animations(
-  carousel_selector: String,
-  slide_selector: String,
-  slide_index: Int,
-) -> Effect(Msg) {
-  use dispatch <- effect.from
-  use _ <- request_animation_frame
-
-  do_reset_animations(carousel_selector)
-  play_animations_for_slide(slide_selector, slide_index)
-  io.println("Setting timeout for 10 seconds")
-  let timer = set_timeout(10_000, autoplay_trigger)
-  AutoplayTimeoutSet(timer) |> dispatch
-}
-
-fn autoplay_trigger() -> Effect(Msg) {
-  io.println("Autoplay timeout triggered.")
-  use dispatch <- effect.from
-
-  AutoplayTimeoutTriggered |> dispatch
-}
-
-fn start_animations(slide_selector: String, slide_index: Int) -> Effect(msg) {
-  use _ <- effect.from
-  use _ <- request_animation_frame
-
-  play_animations_for_slide(slide_selector, slide_index)
-  Nil
-}
-
-@external(javascript, "./ffi.mjs", "playAnimationsForSlide")
-fn play_animations_for_slide(selector: String, index: Int) -> Nil
-
-@external(javascript, "./ffi.mjs", "resetAnimations")
-fn do_reset_animations(selector: String) -> Nil
-
-pub type RequestID =
-  Nil
-
-@external(javascript, "./ffi.mjs", "requestAnimationFrame")
-fn request_animation_frame(callbacki: fn(Float) -> Nil) -> RequestID
-
-pub type TimerID
-
-@external(javascript, "./ffi.mjs", "setTimeout")
-fn set_timeout(delay: Int, callback: fn() -> a) -> Int
-
-@external(javascript, "./ffi.mjs", "clearTimeout")
-fn clear_timeout(timer: Int) -> Nil

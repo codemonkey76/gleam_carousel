@@ -111,6 +111,12 @@ function makeError(variant, module, line, fn, message, extra) {
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/option.mjs
+var Some = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
 var None = class extends CustomType {
 };
 
@@ -793,28 +799,15 @@ function on_click(msg) {
     return new Ok(msg);
   });
 }
-
-// build/dev/javascript/carousel/carousel/slides.mjs
-function get_transform(slide_number, current_slide) {
-  return [
-    "transform",
-    "translateX(" + to_string(100 * (slide_number - current_slide)) + "%)"
-  ];
+function on_mouse_enter(msg) {
+  return on2("mouseenter", (_) => {
+    return new Ok(msg);
+  });
 }
-function slide(image_url, slide_index, current_index, content) {
-  return div(
-    toList([
-      class$("w-full h-full absolute bg-cover py-12 slide"),
-      style(
-        toList([
-          ["background-image", "url('" + image_url + "')"],
-          ["transition", "transform 0.5s cubic-bezier(0.42, 0, 0.58, 1);"],
-          get_transform(slide_index, current_index)
-        ])
-      )
-    ]),
-    toList([content()])
-  );
+function on_mouse_leave(msg) {
+  return on2("mouseleave", (_) => {
+    return new Ok(msg);
+  });
 }
 
 // build/dev/javascript/carousel/ffi.mjs
@@ -850,16 +843,11 @@ function playAnimationsForSlide(selector, index) {
 function setTimeout(delay, callback) {
   return globalThis.setTimeout(callback, delay);
 }
+function clearTimeout(timer) {
+  globalThis.clearTimeout(timer);
+}
 
-// build/dev/javascript/carousel/carousel.mjs
-var Model = class extends CustomType {
-  constructor(current_slide_index, total_slides, timer) {
-    super();
-    this.current_slide_index = current_slide_index;
-    this.total_slides = total_slides;
-    this.timer = timer;
-  }
-};
+// build/dev/javascript/carousel/carousel/types.mjs
 var UserClickedSlidePage = class extends CustomType {
   constructor(slide_index) {
     super();
@@ -867,6 +855,8 @@ var UserClickedSlidePage = class extends CustomType {
   }
 };
 var UserClickedSlideNext = class extends CustomType {
+};
+var UserClickedSlidePrev = class extends CustomType {
 };
 var AutoplayTimeoutTriggered = class extends CustomType {
 };
@@ -876,48 +866,173 @@ var AutoplayTimeoutSet = class extends CustomType {
     this[0] = x0;
   }
 };
-function set_page_number(model, page) {
-  if (page < model.total_slides && page >= 0) {
-    let n = page;
-    return model.withFields({ current_slide_index: n });
-  } else {
-    return model;
+var UserMouseOveredCarousel = class extends CustomType {
+};
+var UserMouseLeftCarousel = class extends CustomType {
+};
+var Model = class extends CustomType {
+  constructor(current_slide_index, total_slides, timer) {
+    super();
+    this.current_slide_index = current_slide_index;
+    this.total_slides = total_slides;
+    this.timer = timer;
   }
-}
-function pagination_button(number, active) {
-  let classes = (() => {
-    if (!active) {
-      return "bg-[#aaa]";
-    } else {
-      return "bg-[#333] scale-150";
-    }
-  })();
-  return button(
+};
+
+// build/dev/javascript/carousel/carousel/ui.mjs
+function prev_button() {
+  return div(
+    toList([class$("absolute top-0 bottom-0 flex items-center")]),
     toList([
-      on_click(new UserClickedSlidePage(number)),
-      class$(classes),
-      class$(
-        "text-transparent rounded-full w-[.5em] h-[.5em] ease-in-out duration-250 transition-all"
-      ),
-      role("tab"),
-      attribute("aria-selected", "true")
-    ]),
-    toList([text(to_string(number))])
+      div(
+        toList([class$("p-10 pl-2 group")]),
+        toList([
+          button(
+            toList([
+              on_click(new UserClickedSlidePrev()),
+              attribute("title", "Previous Slide"),
+              class$(
+                "flex items-center justify-center w-10 h-10 p-3 rounded-full duration-200 group-hover:bg-white/30 text-transparent group-hover:text-gray-900/80"
+              )
+            ]),
+            toList([
+              svg(
+                toList([
+                  class$("fill-current"),
+                  attribute("xmlns", "http://www.w3.org/2000/svg"),
+                  attribute("viewBox", "0 0 320 512")
+                ]),
+                toList([
+                  path(
+                    toList([
+                      attribute(
+                        "d",
+                        "M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"
+                      )
+                    ])
+                  )
+                ])
+              )
+            ])
+          )
+        ])
+      )
+    ])
   );
 }
-function pagination(slide_index) {
-  return nav(
+function next_button() {
+  return div(
+    toList([class$("absolute top-0 bottom-0 right-0 flex items-center")]),
     toList([
-      class$(
-        "absolute flex mx-auto pb-2 bottom-0 left-0 right-0 justify-center space-x-2"
+      div(
+        toList([class$("p-10 pr-2 group")]),
+        toList([
+          button(
+            toList([
+              on_click(new UserClickedSlideNext()),
+              attribute("title", "Next Slide"),
+              class$(
+                "flex items-center justify-center w-10 h-10 p-3 rounded-full duration-200 group-hover:bg-white/30 text-transparent group-hover:text-gray-900/80"
+              )
+            ]),
+            toList([
+              svg(
+                toList([
+                  class$("fill-current"),
+                  attribute("xmlns", "http://www.w3.org/2000/svg"),
+                  attribute("viewBox", "0 0 320 512")
+                ]),
+                toList([
+                  path(
+                    toList([
+                      attribute(
+                        "d",
+                        "M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"
+                      )
+                    ])
+                  )
+                ])
+              )
+            ])
+          )
+        ])
+      )
+    ])
+  );
+}
+
+// build/dev/javascript/carousel/carousel/effects.mjs
+function start_autoplay() {
+  return from2(
+    (dispatch) => {
+      return requestAnimationFrame(
+        (_) => {
+          let timer = setTimeout(
+            1e3,
+            () => {
+              return dispatch(new AutoplayTimeoutTriggered());
+            }
+          );
+          let _pipe = new AutoplayTimeoutSet(timer);
+          return dispatch(_pipe);
+        }
+      );
+    }
+  );
+}
+function start_animations(slide_selector2, slide_index) {
+  return from2(
+    (_) => {
+      return requestAnimationFrame(
+        (_2) => {
+          playAnimationsForSlide(slide_selector2, slide_index);
+          return void 0;
+        }
+      );
+    }
+  );
+}
+function init_animations(carousel_selector2, slide_selector2, slide_index) {
+  return from2(
+    (dispatch) => {
+      return requestAnimationFrame(
+        (_) => {
+          resetAnimations(carousel_selector2);
+          playAnimationsForSlide(slide_selector2, slide_index);
+          let timer = setTimeout(
+            1e3,
+            () => {
+              return dispatch(new AutoplayTimeoutTriggered());
+            }
+          );
+          let _pipe = new AutoplayTimeoutSet(timer);
+          return dispatch(_pipe);
+        }
+      );
+    }
+  );
+}
+
+// build/dev/javascript/carousel/carousel/slides.mjs
+function get_transform(slide_number, current_slide) {
+  return [
+    "transform",
+    "translateX(" + to_string(100 * (slide_number - current_slide)) + "%)"
+  ];
+}
+function slide(image_url, slide_index, current_index, content) {
+  return div(
+    toList([
+      class$("w-full h-full absolute bg-cover py-12 slide"),
+      style(
+        toList([
+          ["background-image", "url('" + image_url + "')"],
+          ["transition", "transform 0.5s cubic-bezier(0.42, 0, 0.58, 1);"],
+          get_transform(slide_index, current_index)
+        ])
       )
     ]),
-    toList([
-      pagination_button(0, slide_index === 0),
-      pagination_button(1, slide_index === 1),
-      pagination_button(2, slide_index === 2),
-      pagination_button(3, slide_index === 3)
-    ])
+    toList([content()])
   );
 }
 function check_item(classes, content) {
@@ -1255,10 +1370,88 @@ function slide4_content() {
     ])
   );
 }
+
+// build/dev/javascript/carousel/carousel.mjs
+function stop_autoplay(model) {
+  let $ = model.timer;
+  if ($ instanceof Some) {
+    let timer = $[0];
+    clearTimeout(timer);
+  } else {
+  }
+  return model.withFields({ timer: new None() });
+}
+function decrement_page(model) {
+  let $ = model.current_slide_index;
+  if ($ === 0) {
+    return model.withFields({ current_slide_index: model.total_slides - 1 });
+  } else {
+    return model.withFields({
+      current_slide_index: model.current_slide_index - 1
+    });
+  }
+}
+function increment_page(model) {
+  let $ = model.current_slide_index;
+  if ($ < model.total_slides - 1) {
+    let n = $;
+    return model.withFields({
+      current_slide_index: model.current_slide_index + 1
+    });
+  } else {
+    return model.withFields({ current_slide_index: 0 });
+  }
+}
+function set_page_number(model, page) {
+  if (page < model.total_slides && page >= 0) {
+    let n = page;
+    return model.withFields({ current_slide_index: n });
+  } else {
+    return model;
+  }
+}
+function pagination_button(number, active) {
+  let classes = (() => {
+    if (!active) {
+      return "bg-[#aaa]";
+    } else {
+      return "bg-[#333] scale-150";
+    }
+  })();
+  return button(
+    toList([
+      on_click(new UserClickedSlidePage(number)),
+      class$(classes),
+      class$(
+        "text-transparent rounded-full w-[.5em] h-[.5em] ease-in-out duration-250 transition-all"
+      ),
+      role("tab"),
+      attribute("aria-selected", "true")
+    ]),
+    toList([text(to_string(number))])
+  );
+}
+function pagination(slide_index) {
+  return nav(
+    toList([
+      class$(
+        "absolute flex mx-auto pb-2 bottom-0 left-0 right-0 justify-center space-x-2"
+      )
+    ]),
+    toList([
+      pagination_button(0, slide_index === 0),
+      pagination_button(1, slide_index === 1),
+      pagination_button(2, slide_index === 2),
+      pagination_button(3, slide_index === 3)
+    ])
+  );
+}
 function carousel(slide_index) {
   return div(
     toList([
       id("carousel-1"),
+      on_mouse_enter(new UserMouseOveredCarousel()),
+      on_mouse_leave(new UserMouseLeftCarousel()),
       class$("relative overflow-hidden min-h-[500px] font-display text-white")
     ]),
     toList([
@@ -1286,7 +1479,9 @@ function carousel(slide_index) {
         slide_index,
         slide4_content
       ),
-      pagination(slide_index)
+      pagination(slide_index),
+      next_button(),
+      prev_button()
     ])
   );
 }
@@ -1296,73 +1491,36 @@ function view(model) {
     toList([carousel(model.current_slide_index)])
   );
 }
-function autoplay_trigger() {
-  println("Autoplay timeout triggered.");
-  return from2(
-    (dispatch) => {
-      let _pipe = new AutoplayTimeoutTriggered();
-      return dispatch(_pipe);
-    }
-  );
-}
-function start_animations(slide_selector2, slide_index) {
-  return from2(
-    (_) => {
-      return requestAnimationFrame(
-        (_2) => {
-          playAnimationsForSlide(slide_selector2, slide_index);
-          return void 0;
-        }
-      );
-    }
-  );
-}
-function init_animations(carousel_selector2, slide_selector2, slide_index) {
-  return from2(
-    (dispatch) => {
-      return requestAnimationFrame(
-        (_) => {
-          resetAnimations(carousel_selector2);
-          playAnimationsForSlide(slide_selector2, slide_index);
-          println("Setting timeout for 10 seconds");
-          let timer = setTimeout(1e4, autoplay_trigger);
-          let _pipe = new AutoplayTimeoutSet(timer);
-          return dispatch(_pipe);
-        }
-      );
-    }
-  );
-}
 var carousel_selector = "#carousel-1";
 var slide_selector = ".slide";
 function init2(_) {
   return [
-    new Model(0, 4, 0),
+    new Model(0, 4, new None()),
     init_animations(carousel_selector, slide_selector, 0)
   ];
 }
 function update2(model, msg) {
-  if (msg instanceof AutoplayTimeoutSet) {
-    let timer = msg[0];
-    return [model.withFields({ timer }), none()];
-  } else if (msg instanceof AutoplayTimeoutTriggered) {
-    println("Current Slide: " + to_string(model.current_slide_index));
-    let new_page = (() => {
-      let $ = model.current_slide_index;
-      if ($ < model.total_slides - 1) {
-        let n = $;
-        return n + 1;
-      } else {
-        return 0;
-      }
+  if (msg instanceof UserMouseOveredCarousel) {
+    println("Mouse Entered -> Pausing Autoplay");
+    let model$1 = (() => {
+      let _pipe = model;
+      return stop_autoplay(_pipe);
     })();
-    println("Setting new page number: " + to_string(new_page));
+    return [model$1, none()];
+  } else if (msg instanceof UserMouseLeftCarousel) {
+    println("Mouse Left -> Starting Autoplay");
+    return [model, start_autoplay()];
+  } else if (msg instanceof AutoplayTimeoutSet) {
+    let timer = msg[0];
+    return [model.withFields({ timer: new Some(timer) }), none()];
+  } else if (msg instanceof AutoplayTimeoutTriggered) {
+    let model$1 = (() => {
+      let _pipe = model;
+      return increment_page(_pipe);
+    })();
     return [
-      (() => {
-        let _pipe = model;
-        return set_page_number(_pipe, new_page);
-      })(),
-      none()
+      model$1,
+      start_animations(slide_selector, model$1.current_slide_index)
     ];
   } else if (msg instanceof UserClickedSlidePage) {
     let n = msg.slide_index;
@@ -1376,7 +1534,7 @@ function update2(model, msg) {
   } else if (msg instanceof UserClickedSlideNext) {
     let model$1 = (() => {
       let _pipe = model;
-      return set_page_number(_pipe, model.current_slide_index + 1);
+      return increment_page(_pipe);
     })();
     return [
       model$1,
@@ -1385,7 +1543,7 @@ function update2(model, msg) {
   } else {
     let model$1 = (() => {
       let _pipe = model;
-      return set_page_number(_pipe, model.current_slide_index - 1);
+      return decrement_page(_pipe);
     })();
     return [
       model$1,
@@ -1400,7 +1558,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "carousel",
-      18,
+      26,
       "main",
       "Assignment pattern did not match",
       { value: $ }
