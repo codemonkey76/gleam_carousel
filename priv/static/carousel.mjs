@@ -158,18 +158,10 @@ function identity(x) {
 function to_string3(term) {
   return term.toString();
 }
-function console_log(term) {
-  console.log(term);
-}
 
 // build/dev/javascript/gleam_stdlib/gleam/int.mjs
 function to_string(x) {
   return to_string3(x);
-}
-
-// build/dev/javascript/gleam_stdlib/gleam/io.mjs
-function println(string3) {
-  return console_log(string3);
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/bool.mjs
@@ -879,88 +871,6 @@ var Model = class extends CustomType {
   }
 };
 
-// build/dev/javascript/carousel/carousel/ui.mjs
-function prev_button() {
-  return div(
-    toList([class$("absolute top-0 bottom-0 flex items-center")]),
-    toList([
-      div(
-        toList([class$("p-10 pl-2 group")]),
-        toList([
-          button(
-            toList([
-              on_click(new UserClickedSlidePrev()),
-              attribute("title", "Previous Slide"),
-              class$(
-                "flex items-center justify-center w-10 h-10 p-3 rounded-full duration-200 group-hover:bg-white/30 text-transparent group-hover:text-gray-900/80"
-              )
-            ]),
-            toList([
-              svg(
-                toList([
-                  class$("fill-current"),
-                  attribute("xmlns", "http://www.w3.org/2000/svg"),
-                  attribute("viewBox", "0 0 320 512")
-                ]),
-                toList([
-                  path(
-                    toList([
-                      attribute(
-                        "d",
-                        "M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"
-                      )
-                    ])
-                  )
-                ])
-              )
-            ])
-          )
-        ])
-      )
-    ])
-  );
-}
-function next_button() {
-  return div(
-    toList([class$("absolute top-0 bottom-0 right-0 flex items-center")]),
-    toList([
-      div(
-        toList([class$("p-10 pr-2 group")]),
-        toList([
-          button(
-            toList([
-              on_click(new UserClickedSlideNext()),
-              attribute("title", "Next Slide"),
-              class$(
-                "flex items-center justify-center w-10 h-10 p-3 rounded-full duration-200 group-hover:bg-white/30 text-transparent group-hover:text-gray-900/80"
-              )
-            ]),
-            toList([
-              svg(
-                toList([
-                  class$("fill-current"),
-                  attribute("xmlns", "http://www.w3.org/2000/svg"),
-                  attribute("viewBox", "0 0 320 512")
-                ]),
-                toList([
-                  path(
-                    toList([
-                      attribute(
-                        "d",
-                        "M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"
-                      )
-                    ])
-                  )
-                ])
-              )
-            ])
-          )
-        ])
-      )
-    ])
-  );
-}
-
 // build/dev/javascript/carousel/carousel/effects.mjs
 function start_autoplay() {
   return from2(
@@ -1011,6 +921,46 @@ function init_animations(carousel_selector2, slide_selector2, slide_index) {
       );
     }
   );
+}
+
+// build/dev/javascript/carousel/carousel/model.mjs
+function stop_autoplay(model) {
+  let $ = model.timer;
+  if ($ instanceof Some) {
+    let timer = $[0];
+    clearTimeout(timer);
+  } else {
+  }
+  return model.withFields({ timer: new None() });
+}
+function decrement_page(model) {
+  let $ = model.current_slide_index;
+  if ($ === 0) {
+    return model.withFields({ current_slide_index: model.total_slides - 1 });
+  } else {
+    return model.withFields({
+      current_slide_index: model.current_slide_index - 1
+    });
+  }
+}
+function increment_page(model) {
+  let $ = model.current_slide_index;
+  if ($ < model.total_slides - 1) {
+    let n = $;
+    return model.withFields({
+      current_slide_index: model.current_slide_index + 1
+    });
+  } else {
+    return model.withFields({ current_slide_index: 0 });
+  }
+}
+function set_page_number(model, page) {
+  if (page < model.total_slides && page >= 0) {
+    let n = page;
+    return model.withFields({ current_slide_index: n });
+  } else {
+    return model;
+  }
 }
 
 // build/dev/javascript/carousel/carousel/slides.mjs
@@ -1371,45 +1321,7 @@ function slide4_content() {
   );
 }
 
-// build/dev/javascript/carousel/carousel.mjs
-function stop_autoplay(model) {
-  let $ = model.timer;
-  if ($ instanceof Some) {
-    let timer = $[0];
-    clearTimeout(timer);
-  } else {
-  }
-  return model.withFields({ timer: new None() });
-}
-function decrement_page(model) {
-  let $ = model.current_slide_index;
-  if ($ === 0) {
-    return model.withFields({ current_slide_index: model.total_slides - 1 });
-  } else {
-    return model.withFields({
-      current_slide_index: model.current_slide_index - 1
-    });
-  }
-}
-function increment_page(model) {
-  let $ = model.current_slide_index;
-  if ($ < model.total_slides - 1) {
-    let n = $;
-    return model.withFields({
-      current_slide_index: model.current_slide_index + 1
-    });
-  } else {
-    return model.withFields({ current_slide_index: 0 });
-  }
-}
-function set_page_number(model, page) {
-  if (page < model.total_slides && page >= 0) {
-    let n = page;
-    return model.withFields({ current_slide_index: n });
-  } else {
-    return model;
-  }
-}
+// build/dev/javascript/carousel/carousel/view.mjs
 function pagination_button(number, active) {
   let classes = (() => {
     if (!active) {
@@ -1443,6 +1355,86 @@ function pagination(slide_index) {
       pagination_button(1, slide_index === 1),
       pagination_button(2, slide_index === 2),
       pagination_button(3, slide_index === 3)
+    ])
+  );
+}
+function prev_button() {
+  return div(
+    toList([class$("absolute top-0 bottom-0 flex items-center")]),
+    toList([
+      div(
+        toList([class$("p-10 pl-2 group")]),
+        toList([
+          button(
+            toList([
+              on_click(new UserClickedSlidePrev()),
+              attribute("title", "Previous Slide"),
+              class$(
+                "flex items-center justify-center w-10 h-10 p-3 rounded-full duration-200 group-hover:bg-white/30 text-transparent group-hover:text-gray-900/80"
+              )
+            ]),
+            toList([
+              svg(
+                toList([
+                  class$("fill-current"),
+                  attribute("xmlns", "http://www.w3.org/2000/svg"),
+                  attribute("viewBox", "0 0 320 512")
+                ]),
+                toList([
+                  path(
+                    toList([
+                      attribute(
+                        "d",
+                        "M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"
+                      )
+                    ])
+                  )
+                ])
+              )
+            ])
+          )
+        ])
+      )
+    ])
+  );
+}
+function next_button() {
+  return div(
+    toList([class$("absolute top-0 bottom-0 right-0 flex items-center")]),
+    toList([
+      div(
+        toList([class$("p-10 pr-2 group")]),
+        toList([
+          button(
+            toList([
+              on_click(new UserClickedSlideNext()),
+              attribute("title", "Next Slide"),
+              class$(
+                "flex items-center justify-center w-10 h-10 p-3 rounded-full duration-200 group-hover:bg-white/30 text-transparent group-hover:text-gray-900/80"
+              )
+            ]),
+            toList([
+              svg(
+                toList([
+                  class$("fill-current"),
+                  attribute("xmlns", "http://www.w3.org/2000/svg"),
+                  attribute("viewBox", "0 0 320 512")
+                ]),
+                toList([
+                  path(
+                    toList([
+                      attribute(
+                        "d",
+                        "M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"
+                      )
+                    ])
+                  )
+                ])
+              )
+            ])
+          )
+        ])
+      )
     ])
   );
 }
@@ -1485,6 +1477,8 @@ function carousel(slide_index) {
     ])
   );
 }
+
+// build/dev/javascript/carousel/carousel.mjs
 function view(model) {
   return div(
     toList([class$("w-full bg-white")]),
@@ -1501,14 +1495,12 @@ function init2(_) {
 }
 function update2(model, msg) {
   if (msg instanceof UserMouseOveredCarousel) {
-    println("Mouse Entered -> Pausing Autoplay");
     let model$1 = (() => {
       let _pipe = model;
       return stop_autoplay(_pipe);
     })();
     return [model$1, none()];
   } else if (msg instanceof UserMouseLeftCarousel) {
-    println("Mouse Left -> Starting Autoplay");
     return [model, start_autoplay()];
   } else if (msg instanceof AutoplayTimeoutSet) {
     let timer = msg[0];
@@ -1558,7 +1550,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "carousel",
-      26,
+      28,
       "main",
       "Assignment pattern did not match",
       { value: $ }
