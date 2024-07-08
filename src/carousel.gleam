@@ -44,7 +44,10 @@ pub fn update(model: Model, msg) {
       let model = model |> model.increment_page
       #(
         model,
-        effects.start_animations(slide_selector, model.current_slide_index),
+        effect.batch([
+          effects.start_autoplay(),
+          effects.start_animations(slide_selector, model.current_slide_index),
+        ]),
       )
     }
     UserClickedSlidePage(n) -> #(

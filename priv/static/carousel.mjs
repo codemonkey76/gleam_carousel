@@ -46,6 +46,9 @@ var List = class {
     return length2;
   }
 };
+function prepend(element2, tail) {
+  return new NonEmpty(element2, tail);
+}
 function toList(elements, tail) {
   return List.fromArray(elements, tail);
 }
@@ -120,7 +123,62 @@ var Some = class extends CustomType {
 var None = class extends CustomType {
 };
 
+// build/dev/javascript/gleam_stdlib/dict.mjs
+var tempDataView = new DataView(new ArrayBuffer(8));
+var SHIFT = 5;
+var BUCKET_SIZE = Math.pow(2, SHIFT);
+var MASK = BUCKET_SIZE - 1;
+var MAX_INDEX_NODE = BUCKET_SIZE / 2;
+var MIN_ARRAY_NODE = BUCKET_SIZE / 4;
+
+// build/dev/javascript/gleam_stdlib/gleam_stdlib.mjs
+function identity(x) {
+  return x;
+}
+function to_string(term) {
+  return term.toString();
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/int.mjs
+function to_string2(x) {
+  return to_string(x);
+}
+
 // build/dev/javascript/gleam_stdlib/gleam/list.mjs
+function do_reverse(loop$remaining, loop$accumulator) {
+  while (true) {
+    let remaining = loop$remaining;
+    let accumulator = loop$accumulator;
+    if (remaining.hasLength(0)) {
+      return accumulator;
+    } else {
+      let item = remaining.head;
+      let rest$1 = remaining.tail;
+      loop$remaining = rest$1;
+      loop$accumulator = prepend(item, accumulator);
+    }
+  }
+}
+function reverse(xs) {
+  return do_reverse(xs, toList([]));
+}
+function do_append(loop$first, loop$second) {
+  while (true) {
+    let first2 = loop$first;
+    let second = loop$second;
+    if (first2.hasLength(0)) {
+      return second;
+    } else {
+      let item = first2.head;
+      let rest$1 = first2.tail;
+      loop$first = rest$1;
+      loop$second = prepend(item, second);
+    }
+  }
+}
+function append(first2, second) {
+  return do_append(reverse(first2), second);
+}
 function fold(loop$list, loop$initial, loop$fun) {
   while (true) {
     let list = loop$list;
@@ -141,27 +199,6 @@ function fold(loop$list, loop$initial, loop$fun) {
 // build/dev/javascript/gleam_stdlib/gleam/dynamic.mjs
 function from(a) {
   return identity(a);
-}
-
-// build/dev/javascript/gleam_stdlib/dict.mjs
-var tempDataView = new DataView(new ArrayBuffer(8));
-var SHIFT = 5;
-var BUCKET_SIZE = Math.pow(2, SHIFT);
-var MASK = BUCKET_SIZE - 1;
-var MAX_INDEX_NODE = BUCKET_SIZE / 2;
-var MIN_ARRAY_NODE = BUCKET_SIZE / 4;
-
-// build/dev/javascript/gleam_stdlib/gleam_stdlib.mjs
-function identity(x) {
-  return x;
-}
-function to_string3(term) {
-  return term.toString();
-}
-
-// build/dev/javascript/gleam_stdlib/gleam/int.mjs
-function to_string(x) {
-  return to_string3(x);
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/bool.mjs
@@ -187,6 +224,18 @@ function from2(effect) {
 }
 function none() {
   return new Effect(toList([]));
+}
+function batch(effects) {
+  return new Effect(
+    fold(
+      effects,
+      toList([]),
+      (b, _use1) => {
+        let a = _use1.all;
+        return append(b, a);
+      }
+    )
+  );
 }
 
 // build/dev/javascript/lustre/lustre/internals/vdom.mjs
@@ -773,35 +822,6 @@ function button(attrs, children) {
   return element("button", attrs, children);
 }
 
-// build/dev/javascript/lustre/lustre/element/svg.mjs
-var namespace = "http://www.w3.org/2000/svg";
-function svg(attrs, children) {
-  return namespaced(namespace, "svg", attrs, children);
-}
-function path(attrs) {
-  return namespaced(namespace, "path", attrs, toList([]));
-}
-
-// build/dev/javascript/lustre/lustre/event.mjs
-function on2(name, handler) {
-  return on(name, handler);
-}
-function on_click(msg) {
-  return on2("click", (_) => {
-    return new Ok(msg);
-  });
-}
-function on_mouse_enter(msg) {
-  return on2("mouseenter", (_) => {
-    return new Ok(msg);
-  });
-}
-function on_mouse_leave(msg) {
-  return on2("mouseleave", (_) => {
-    return new Ok(msg);
-  });
-}
-
 // build/dev/javascript/carousel/ffi.mjs
 function requestAnimationFrame(callback) {
   window.requestAnimationFrame(callback);
@@ -878,7 +898,7 @@ function start_autoplay() {
       return requestAnimationFrame(
         (_) => {
           let timer = setTimeout(
-            1e3,
+            1e4,
             () => {
               return dispatch(new AutoplayTimeoutTriggered());
             }
@@ -910,7 +930,7 @@ function init_animations(carousel_selector2, slide_selector2, slide_index) {
           resetAnimations(carousel_selector2);
           playAnimationsForSlide(slide_selector2, slide_index);
           let timer = setTimeout(
-            1e3,
+            1e4,
             () => {
               return dispatch(new AutoplayTimeoutTriggered());
             }
@@ -963,11 +983,40 @@ function set_page_number(model, page) {
   }
 }
 
+// build/dev/javascript/lustre/lustre/element/svg.mjs
+var namespace = "http://www.w3.org/2000/svg";
+function svg(attrs, children) {
+  return namespaced(namespace, "svg", attrs, children);
+}
+function path(attrs) {
+  return namespaced(namespace, "path", attrs, toList([]));
+}
+
+// build/dev/javascript/lustre/lustre/event.mjs
+function on2(name, handler) {
+  return on(name, handler);
+}
+function on_click(msg) {
+  return on2("click", (_) => {
+    return new Ok(msg);
+  });
+}
+function on_mouse_enter(msg) {
+  return on2("mouseenter", (_) => {
+    return new Ok(msg);
+  });
+}
+function on_mouse_leave(msg) {
+  return on2("mouseleave", (_) => {
+    return new Ok(msg);
+  });
+}
+
 // build/dev/javascript/carousel/carousel/slides.mjs
 function get_transform(slide_number, current_slide) {
   return [
     "transform",
-    "translateX(" + to_string(100 * (slide_number - current_slide)) + "%)"
+    "translateX(" + to_string2(100 * (slide_number - current_slide)) + "%)"
   ];
 }
 function slide(image_url, slide_index, current_index, content) {
@@ -1340,7 +1389,7 @@ function pagination_button(number, active) {
       role("tab"),
       attribute("aria-selected", "true")
     ]),
-    toList([text(to_string(number))])
+    toList([text(to_string2(number))])
   );
 }
 function pagination(slide_index) {
@@ -1512,7 +1561,12 @@ function update2(model, msg) {
     })();
     return [
       model$1,
-      start_animations(slide_selector, model$1.current_slide_index)
+      batch(
+        toList([
+          start_autoplay(),
+          start_animations(slide_selector, model$1.current_slide_index)
+        ])
+      )
     ];
   } else if (msg instanceof UserClickedSlidePage) {
     let n = msg.slide_index;
@@ -1550,7 +1604,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "carousel",
-      28,
+      21,
       "main",
       "Assignment pattern did not match",
       { value: $ }

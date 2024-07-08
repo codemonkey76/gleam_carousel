@@ -8,7 +8,7 @@ pub fn start_autoplay() -> Effect(Msg) {
   use dispatch <- effect.from
   use _ <- request_animation_frame
 
-  let timer = set_timeout(1000, fn() { dispatch(AutoplayTimeoutTriggered) })
+  let timer = set_timeout(10_000, fn() { dispatch(AutoplayTimeoutTriggered) })
   AutoplayTimeoutSet(timer) |> dispatch
 }
 
@@ -30,7 +30,7 @@ pub fn init_animations(
 
   do_reset_animations(carousel_selector)
   play_animations_for_slide(slide_selector, slide_index)
-  let timer = set_timeout(1000, fn() { dispatch(AutoplayTimeoutTriggered) })
+  let timer = set_timeout(10_000, fn() { dispatch(AutoplayTimeoutTriggered) })
 
   AutoplayTimeoutSet(timer) |> dispatch
 }
